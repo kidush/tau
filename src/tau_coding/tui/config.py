@@ -52,6 +52,12 @@ class TuiKeybindings:
 
 
 type TuiThemeName = Literal["tau-dark", "tau-light", "high-contrast"]
+type ContextUsageDisplay = Literal[
+    "threshold_tokens",
+    "window_tokens",
+    "window_percent",
+    "window_both",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -243,11 +249,13 @@ class TuiSettings:
     theme: TuiThemeName = "tau-dark"
     auto_copy_selection: bool = False
     sidebar_position: Literal["left", "right", "off"] = "left"
+    context_usage_display: ContextUsageDisplay = "threshold_tokens"
 
     def to_json(self) -> dict[str, Any]:
         """Serialize these settings to JSON-compatible data."""
         return {
             "auto_copy_selection": self.auto_copy_selection,
+            "context_usage_display": self.context_usage_display,
             "keybindings": self.keybindings.to_json(),
             "sidebar_position": self.sidebar_position,
             "theme": self.theme,
@@ -285,7 +293,13 @@ def save_tui_settings(settings: TuiSettings, paths: TauPaths | None = None) -> P
 
 def tui_settings_from_json(data: dict[str, Any]) -> TuiSettings:
     """Parse TUI settings from JSON-compatible data."""
-    allowed_fields = {"auto_copy_selection", "keybindings", "sidebar_position", "theme"}
+    allowed_fields = {
+        "auto_copy_selection",
+        "context_usage_display",
+        "keybindings",
+        "sidebar_position",
+        "theme",
+    }
     unknown_fields = set(data) - allowed_fields
     if unknown_fields:
         raise TuiConfigError(f"Unknown TUI settings field: {sorted(unknown_fields)[0]}")
@@ -304,6 +318,9 @@ def tui_settings_from_json(data: dict[str, Any]) -> TuiSettings:
             "auto_copy_selection",
         ),
         sidebar_position=cast(Literal["left", "right", "off"], raw_sidebar),
+        context_usage_display=_context_usage_display(
+            data.get("context_usage_display", "threshold_tokens")
+        ),
     )
 
 
@@ -342,6 +359,15 @@ def _theme_name(value: object) -> TuiThemeName:
     if name == "tau-dark" or name == "tau-light" or name == "high-contrast":
         return cast(TuiThemeName, name)
     raise TuiConfigError(f"Unknown TUI theme: {name}")
+
+
+def _context_usage_display(value: object) -> ContextUsageDisplay:
+    if not isinstance(value, str) or not value.strip():
+        raise TuiConfigError("context_usage_display must be a non-empty string")
+    display = value.strip()
+    if display in {"threshold_tokens", "window_tokens", "window_percent", "window_both"}:
+        return cast(ContextUsageDisplay, display)
+    raise TuiConfigError(f"Unknown context_usage_display: {display}")
 
 
 def _reject_duplicate_keys(values: dict[str, str]) -> None:

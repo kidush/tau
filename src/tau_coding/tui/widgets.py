@@ -35,7 +35,7 @@ from tau_coding.prompt_templates import PromptTemplate
 from tau_coding.skills import Skill
 from tau_coding.system_prompt import ProjectContextFile
 from tau_coding.tui.autocomplete import CompletionState
-from tau_coding.tui.config import TAU_DARK_THEME, TuiRoleStyle, TuiTheme
+from tau_coding.tui.config import TAU_DARK_THEME, ContextUsageDisplay, TuiRoleStyle, TuiTheme
 from tau_coding.tui.state import ChatItem, TuiState
 
 TAU_SIDEBAR_LOGO = "τ = 2π"
@@ -106,9 +106,16 @@ class CompactSessionInfo(Static):
         session: SessionSummarySource,
         *,
         theme: TuiTheme = TAU_DARK_THEME,
+        context_usage_display: ContextUsageDisplay = "threshold_tokens",
     ) -> None:
         """Redraw compact session metadata."""
-        self.update(render_compact_session_info(session, theme=theme))
+        self.update(
+            render_compact_session_info(
+                session,
+                theme=theme,
+                context_usage_display=context_usage_display,
+            )
+        )
 
 
 class TauMarkdownBlock(MarkdownBlock):
@@ -971,6 +978,7 @@ def render_compact_session_info(
     session: SessionSummarySource,
     *,
     theme: TuiTheme = TAU_DARK_THEME,
+    context_usage_display: ContextUsageDisplay = "threshold_tokens",
 ) -> RenderableType:
     """Render the session facts below the prompt."""
     left = Text(
@@ -980,7 +988,10 @@ def render_compact_session_info(
         no_wrap=False,
     )
     right = Text(style=theme.muted_text, overflow="fold", no_wrap=False, justify="right")
-    right.append(_context_usage(session), style=theme.completion_description)
+    right.append(
+        _context_usage(session, display=context_usage_display),
+        style=theme.completion_description,
+    )
     right.append("  ")
     right.append(f"{session.provider_name}:{session.model}", style=theme.prompt_text)
     right.append(" ")
@@ -1391,17 +1402,53 @@ def _plain_text(text: str, *, body_style: str) -> Text:
     return Text(text, style=body_style, overflow="fold", no_wrap=False)
 
 
-def _context_usage(session: SessionSummarySource) -> str:
+def _context_usage(
+    session: SessionSummarySource,
+    *,
+    display: ContextUsageDisplay = "threshold_tokens",
+) -> str:
+    used = max(session.context_token_estimate, 0)
+    window = max(session.context_window_tokens, 0)
     threshold = session.auto_compact_token_threshold
-    if threshold is None or threshold <= 0:
-        return (
-            f"{_compact_token_count(session.context_token_estimate)}"
-            f"/{_compact_token_count(session.context_window_tokens)} context"
-        )
-    return (
-        f"{_compact_token_count(session.context_token_estimate)}"
-        f"/{_compact_token_count(threshold)} context"
+    has_threshold = threshold is not None and threshold > 0
+
+    if display == "threshold_tokens":
+        denominator = threshold if has_threshold else window
+        return f"{_compact_token_count(used)}/{_compact_token_count(denominator)} context"
+
+    if display == "window_tokens":
+        value = f"{_compact_token_count(used)}/{_compact_token_count(window)} context"
+        return _append_compaction_suffix(value, threshold=threshold, window=window, percent=False)
+
+    if display == "window_percent":
+        value = f"{_context_percent(used, window)} context ({_compact_token_count(window)} max)"
+        return _append_compaction_suffix(value, threshold=threshold, window=window, percent=True)
+
+    value = (
+        f"{_compact_token_count(used)}/{_compact_token_count(window)} · "
+        f"{_context_percent(used, window)} context"
     )
+    return _append_compaction_suffix(value, threshold=threshold, window=window, percent=False)
+
+
+def _append_compaction_suffix(
+    value: str,
+    *,
+    threshold: int | None,
+    window: int,
+    percent: bool,
+) -> str:
+    if threshold is None or threshold <= 0 or threshold >= window:
+        return value
+    if percent:
+        return f"{value} · compact at {_context_percent(threshold, window)}"
+    return f"{value} · compact at {_compact_token_count(threshold)}"
+
+
+def _context_percent(used: int, window: int) -> str:
+    if window <= 0:
+        return "0%"
+    return f"{round((used / window) * 100)}%"
 
 
 def _compact_token_count(value: int) -> str:

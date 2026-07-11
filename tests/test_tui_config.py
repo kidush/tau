@@ -71,10 +71,14 @@ def test_load_tui_settings_reads_keybindings(tmp_path: Path) -> None:
 def test_save_tui_settings_writes_json(tmp_path: Path) -> None:
     paths = TauPaths(home=tmp_path / ".tau", agents_home=tmp_path / ".agents")
 
-    path = save_tui_settings(TuiSettings(theme="tau-light"), paths)
+    path = save_tui_settings(
+        TuiSettings(theme="tau-light", context_usage_display="window_percent"), paths
+    )
 
     assert path == tmp_path / ".tau" / "tui.json"
-    assert load_tui_settings(paths).theme == "tau-light"
+    settings = load_tui_settings(paths)
+    assert settings.theme == "tau-light"
+    assert settings.context_usage_display == "window_percent"
 
 
 def test_tui_settings_ignores_removed_message_selection_keybindings() -> None:
@@ -125,6 +129,18 @@ def test_tui_settings_load_auto_copy_selection() -> None:
 
     assert settings.auto_copy_selection is True
     assert settings.to_json()["auto_copy_selection"] is True
+
+
+def test_tui_settings_load_context_usage_display() -> None:
+    settings = tui_settings_from_json({"context_usage_display": "window_both"})
+
+    assert settings.context_usage_display == "window_both"
+    assert settings.to_json()["context_usage_display"] == "window_both"
+
+
+def test_tui_settings_reject_invalid_context_usage_display() -> None:
+    with pytest.raises(TuiConfigError, match="context_usage_display"):
+        tui_settings_from_json({"context_usage_display": "numbers"})
 
 
 def test_tui_settings_reject_invalid_auto_copy_selection() -> None:

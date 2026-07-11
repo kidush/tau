@@ -487,6 +487,28 @@ def test_compact_session_info_renders_sidebar_facts() -> None:
     assert "(medium)" in output
 
 
+def test_compact_session_info_can_show_model_window_context() -> None:
+    console = Console(record=True, width=140)
+
+    console.print(render_compact_session_info(FakeSession(), context_usage_display="window_tokens"))
+
+    output = console.export_text()
+    assert "12k/216k context" in output
+    assert "compact at 200k" in output
+
+
+def test_compact_session_info_can_show_context_percentage() -> None:
+    console = Console(record=True, width=140)
+
+    console.print(
+        render_compact_session_info(FakeSession(), context_usage_display="window_percent")
+    )
+
+    output = console.export_text()
+    assert "6% context (216k max)" in output
+    assert "compact at 92%" in output
+
+
 def test_compact_token_count_uses_thousands_suffix() -> None:
     assert _compact_token_count(0) == "0k"
     assert _compact_token_count(499) == "<1k"

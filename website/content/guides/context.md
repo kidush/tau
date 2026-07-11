@@ -22,6 +22,13 @@ and per-tool overhead), not a provider tokenizer — treat it as approximate. It
 covers the system prompt, project context (`AGENTS.md`), skill metadata, the
 message history, and tool schemas.
 
+The compact TUI row below the prompt also shows context usage. By default it is
+threshold-aware, so when automatic compaction is enabled it displays usage
+against the compaction threshold rather than the full model window, for example
+`50k/240k context`. If you prefer to see the full model window or a percentage,
+set `context_usage_display` in `~/.tau/tui.json`; see
+[Configuration]({{< relref "../reference/configuration.md#tui-settings" >}}).
+
 ## Automatic compaction
 
 By default, Tau compacts automatically when the estimate gets close to the

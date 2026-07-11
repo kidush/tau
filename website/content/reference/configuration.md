@@ -200,6 +200,7 @@ The built-in frontend reads optional settings from `~/.tau/tui.json`:
 ```json
 {
   "theme": "high-contrast",
+  "context_usage_display": "threshold_tokens",
   "keybindings": {
     "cancel": "escape",
     "command_palette": "ctrl+k",
@@ -227,6 +228,18 @@ duplicate assignments.
 - `sidebar_position`: `"left"` (default), `"right"`, or `"off"`. Controls
   placement of the session metadata sidebar. `"off"` hides the sidebar entirely;
   the compact session info row below the prompt still works.
+- `context_usage_display`: controls the compact context counter below the prompt.
+  Values are:
+  - `"threshold_tokens"` (default): show used tokens against the auto-compaction
+    threshold when enabled, otherwise the model context window, for example
+    `50k/240k context`.
+  - `"window_tokens"`: show used tokens against the model context window and add
+    the compaction point when it differs, for example
+    `50k/256k context · compact at 240k`.
+  - `"window_percent"`: show percentage of the model context window, for example
+    `20% context (256k max) · compact at 94%`.
+  - `"window_both"`: show both token count and percentage against the model
+    context window, for example `50k/256k · 20% context · compact at 240k`.
 
 Full list in [Keyboard shortcuts]({{< relref "./keybindings.md" >}}).
 

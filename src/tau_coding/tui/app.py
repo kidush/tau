@@ -2509,6 +2509,7 @@ class TauTuiApp(App[None]):
             theme=theme,
             auto_copy_selection=self.tui_settings.auto_copy_selection,
             sidebar_position=self.tui_settings.sidebar_position,
+            context_usage_display=self.tui_settings.context_usage_display,
         )
 
     def _set_tui_theme(self, theme: TuiThemeName) -> None:
@@ -3351,7 +3352,11 @@ class TauTuiApp(App[None]):
         sidebar = self.query_one("#sidebar", SessionSidebar)
         sidebar.update_from_session(self.session, theme=theme)
         compact_info = self.query_one("#compact-session-info", CompactSessionInfo)
-        compact_info.update_from_session(self.session, theme=theme)
+        compact_info.update_from_session(
+            self.session,
+            theme=theme,
+            context_usage_display=self.tui_settings.context_usage_display,
+        )
         queued_messages = self.query_one("#queued-messages", Static)
         queued_messages.display = self.state.queued_message_count > 0
         queued_messages.update(_render_queued_messages(self.state, theme=theme))
